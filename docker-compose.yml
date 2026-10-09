@@ -2,7 +2,7 @@
 # Use: docker compose --env-file .env -f docker-compose.yml config
 x-runtime: &runtime
   APP_ENV: ${APP_ENV:-development}
-  TZ: UTC
+  TZ: ${TZ:-UTC}
   SERVICE_NAME: ${SERVICE_NAME:-monorepo-starter}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   DB_DRIVER: mysql
@@ -47,9 +47,6 @@ x-app-image: &app-image
 services:
   app:
     <<: *app-image
-    build:
-      context: .
-      dockerfile: Dockerfile
     restart: unless-stopped
     stop_grace_period: 30s
     ports:
