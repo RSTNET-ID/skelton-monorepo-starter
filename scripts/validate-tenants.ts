@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 type Tenant = {
   folder: string;
   project: string;
+  service: string;
   bind: string;
   port: number;
   namespace: string;
@@ -46,6 +47,10 @@ function required(env: Record<string, string>, key: string, folder: string): str
 function tenant(folder: string): Tenant {
   const env = parseEnv(join(folder, ".env"));
   const project = required(env, "COMPOSE_PROJECT_NAME", folder);
+  const service = required(env, "SERVICE_NAME", folder);
+  if (!/^[a-z][a-z0-9_-]{2,62}$/.test(project)) fail(folder + ": invalid Compose project name");
+  if (!/^[A-Za-z0-9._-]{3,63}$/.test(service)) fail(folder + ": invalid SERVICE_NAME");
+  if (project === "tenant-example" || service === "tenant-example") fail(folder + ": replace example deployment identifiers");
   const bind = required(env, "APP_BIND_HOST", folder);
   const port = Number(required(env, "APP_PUBLISHED_PORT", folder));
   if (!Number.isInteger(port) || port < 1 || port > 65535) fail(folder + ": APP_PUBLISHED_PORT out of range");
@@ -65,7 +70,9 @@ function tenant(folder: string): Tenant {
   }
   if (env.APP_ENV === "production" && env.DB_TLS_MODE !== "verify-full") fail(folder + ": production requires DB_TLS_MODE=verify-full");
   if (env.APP_ENV === "production" && env.EXAMPLE_ROUTES_ENABLED === "true") fail(folder + ": production example routes must be disabled");
-  return { folder, project, bind, port, namespace, database: databaseIdentity, image, tag };
+  if (namespace.startsWith("tenant-example:")) fail(folder + ": replace example REDIS_NAMESPACE");
+  if (database.includes("replace-me") || database.includes("example.internal")) fail(folder + ": replace placeholder database credentials/host");
+  return { folder, project, service, bind, port, namespace, database: databaseIdentity, image, tag };
 }
 
 function overlaps(a: string, b: string): boolean {
@@ -83,9 +90,10 @@ for (let i = 0; i < tenants.length; i++) {
   for (let j = i + 1; j < tenants.length; j++) {
     const a = tenants[i]!, b = tenants[j]!;
     if (a.project === b.project) fail(a.folder + " and " + b.folder + " use the same COMPOSE_PROJECT_NAME");
+    if (a.service === b.service) fail(a.folder + " and " + b.folder + " use the same SERVICE_NAME");
     if (a.port === b.port && overlaps(a.bind, b.bind)) fail(a.folder + " and " + b.folder + " publish overlapping host IP/port");
     if (a.namespace === b.namespace) fail(a.folder + " and " + b.folder + " use the same REDIS_NAMESPACE");
     if (a.database === b.database) fail(a.folder + " and " + b.folder + " use the same DATABASE_URL");
   }
 }
-console.log("Validated " + tenants.length + " tenant environments: no duplicate project, bind/port, Redis namespace, or database URL.");
+console.log("Validated " + tenants.length + " tenant environments: no duplicate project, service, bind/port, Redis namespace, or database identity.");
