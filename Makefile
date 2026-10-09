@@ -3,6 +3,7 @@ SHELL := /bin/sh
 
 ENV_FILE ?= .env
 COMPOSE := docker compose --env-file $(ENV_FILE) -f docker-compose.yml
+BUILD_COMPOSE := docker compose --env-file $(ENV_FILE) -f docker-compose.yml -f docker-compose.build.yml
 HEALTH_HOST ?= 127.0.0.1
 HEALTH_PORT ?= $(shell sed -n 's/^APP_PUBLISHED_PORT=//p' $(ENV_FILE) 2>/dev/null | tail -n 1)
 HEALTH_PORT := $(if $(HEALTH_PORT),$(HEALTH_PORT),3000)
@@ -55,13 +56,13 @@ test:
 docker-config:
 	$(COMPOSE) config --quiet
 docker-build:
-	$(COMPOSE) build app
+	$(BUILD_COMPOSE) build app
 docker-build-no-cache:
-	$(COMPOSE) build --no-cache app
+	$(BUILD_COMPOSE) build --no-cache app
 docker-push:
 	$(COMPOSE) push app
 docker-dev-up:
-	$(COMPOSE) up -d --build app
+	$(BUILD_COMPOSE) up -d --build app
 docker-dev-down:
 	$(COMPOSE) down
 docker-dev-logs:
