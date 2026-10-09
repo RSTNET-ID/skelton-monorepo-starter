@@ -1,0 +1,6 @@
+# Build override for source repository only. Tenant directories need only docker-compose.yml and .env.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
