@@ -8,12 +8,36 @@ HEALTH_HOST ?= 127.0.0.1
 HEALTH_PORT ?= $(shell sed -n 's/^APP_PUBLISHED_PORT=//p' $(ENV_FILE) 2>/dev/null | tail -n 1)
 HEALTH_PORT := $(if $(HEALTH_PORT),$(HEALTH_PORT),3000)
 
-.PHONY: help env-init dev dev-frontend dev-backend build check typecheck lint test \
+.PHONY: verify tenants-validate docker-smoke docker-rollback help env-init dev dev-frontend dev-backend build check typecheck lint test \
  docker-config docker-build docker-build-no-cache docker-push \
  docker-dev-up docker-dev-down docker-dev-logs docker-dev-ps \
  docker-prod-pull docker-prod-up docker-prod-down docker-prod-logs docker-prod-ps docker-prod-restart \
  docker-worker-up docker-scheduler-up docker-logs-api docker-logs-worker docker-logs-scheduler docker-health \
  backend-migrate backend-seed backend-test backend-audit backend-typecheck backend-build clean
+
+verify:
+	bun run check
+	bun run lint
+	bun run test:unit
+	bun run build
+
+# Run from source checkout, pointing at a directory containing tenant subfolders.
+tenants-validate:
+	bun scripts/validate-tenants.ts $(TENANTS_DIR)
+
+# Requires an already-running app. HTTP aggregate health verifies API and DB readiness.
+docker-smoke:
+	$(COMPOSE) config --quiet
+	$(COMPOSE) ps
+	$(MAKE) docker-health ENV_FILE=$(ENV_FILE)
+
+# Requires the previous *existing* image tag to be explicitly supplied.
+# This changes the running container only. Also restore IMAGE_TAG in tenant .env
+# before the next deploy to keep declared and running versions consistent.
+docker-rollback:
+	@test -n "$(ROLLBACK_TAG)" || { echo "Set ROLLBACK_TAG=<previous-immutable-tag>"; exit 1; }
+	IMAGE_TAG=$(ROLLBACK_TAG) $(COMPOSE) up -d --no-build --pull always app
+	IMAGE_TAG=$(ROLLBACK_TAG) $(COMPOSE) ps
 
 help:
 	@echo "RSTNET-ID MONOREPO - Bun, SvelteKit, Hono, Turborepo"
@@ -21,8 +45,11 @@ help:
 	@echo "  make dev                  Run web and API via Turborepo"
 	@echo "  make dev-frontend         Start web"
 	@echo "  make dev-backend          Start API"
-	@echo "  make build|check|lint|test"
-	@echo "  make docker-config        Validate interpolated Compose"
+	@echo "  make build|check|lint|test|verify"
+	@echo "  make tenants-validate TENANTS_DIR=/opt/apps
+	@echo "  make docker-config        Validate interpolated Compose""
+	@echo "  make docker-smoke         Check running container and readiness"
+	@echo "  make docker-rollback ROLLBACK_TAG=1.0.2  Roll back running container"
 	@echo "  make docker-build         Build ONE combined image"
 	@echo "  make docker-build-no-cache"
 	@echo "  make docker-push          Push image to registry"
