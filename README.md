@@ -79,3 +79,11 @@ make dev
 ```
 
 Local web: `http://127.0.0.1:5173`; local API: `http://127.0.0.1:3001`; browser API access stays at `/api` via the web proxy. Local development requires no Docker. The root `.env` is not embedded into the production Docker image. In a tenant VM, only `.env` and `docker-compose.yml` are required, with runtime variables supplied by Compose and image pulled from registry.
+
+## Verification and safe releases
+
+From the source checkout, run `make verify` before building the image. `make tenants-validate TENANTS_DIR=/opt/apps` statically checks tenant `.env` files for duplicate Compose project names, overlapping host bindings and published ports, Redis namespaces, and identical database URLs. Docker Compose validation must also run from each tenant folder: `docker compose --env-file .env config --quiet`.
+
+All roles have configurable CPU, memory, and PID limits in root `.env.example`. For production use an immutable `IMAGE_TAG`, retain the previous release, and test the new image in staging. After deployment, `make docker-smoke ENV_FILE=.env.prod` checks Compose and aggregate HTTP readiness. To roll back a running container from the source checkout: `make docker-rollback ROLLBACK_TAG=<previous-tag> ENV_FILE=.env.prod`; restore `IMAGE_TAG` in the tenant env file too or the next deploy will revert the rollback. Tenant folders without a Makefile can restore the env tag and run `docker compose --env-file .env up -d --no-build --pull always app` directly.
+
+Release instructions, limitations, and rollback precautions: [MONOREPO deployment runbook](docs/MONOREPO.md).
