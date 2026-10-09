@@ -9,7 +9,7 @@ describe('RFC 9562 UUIDv7', () => {
   });
   test('encodes the 48-bit millisecond timestamp in canonical bytes', () => {
     const value = uuidV7(1740000000000);
-    expect(value.replace(/-/g, '').slice(0, 12)).toBe('01950db3d600');
+    expect(value.replace(/-/g, '').slice(0, 12)).toBe('01952014f800');
   });
   test('orders across different timestamps', () => {
     expect(uuidV7(1000) < uuidV7(1001)).toBe(true);
