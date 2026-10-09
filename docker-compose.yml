@@ -1,0 +1,129 @@
+services:
+  app:
+    image: skelton-monorepo-starter:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 30s
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      APP_ENV: development
+      TZ: UTC
+      SERVICE_NAME: monorepo-starter
+      PORT: 3000
+      API_INTERNAL_PORT: 3001
+      AUTO_MIGRATE: "true"
+      AUTO_SEED: "false"
+      LOG_LEVEL: info
+      EXAMPLE_ROUTES_ENABLED: "true"
+      DB_DRIVER: mysql
+      DATABASE_URL: mysql://user:password@mysql:3306/example_service
+      MIGRATION_DATABASE_URL: mysql://user:password@mysql:3306/example_service
+      DB_POOL_MAX: 10
+      DB_PREPARE: "true"
+      DB_TLS_MODE: disable
+      DB_ALLOW_PUBLIC_KEY_RETRIEVAL: "true"
+      API_TIMEOUT_MS: 10000
+      PUBLIC_API_BASE_URL: /api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    pids_limit: 256
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    stop_grace_period: 30s
+    command: ["--default-time-zone=+00:00"]
+    environment:
+      TZ: UTC
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: example_service
+      MYSQL_ROOT_PASSWORD: root-password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uuser -ppassword --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:7.2-alpine
+    profiles: ["worker", "scheduler"]
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  worker:
+    image: skelton-monorepo-starter:local
+    profiles: ["worker"]
+    command: ["/app/api/worker"]
+    environment:
+      APP_ENV: development
+      TZ: UTC
+      SERVICE_NAME: monorepo-starter
+      LOG_LEVEL: info
+      DB_DRIVER: mysql
+      DATABASE_URL: mysql://user:password@mysql:3306/example_service
+      DB_PREPARE: "true"
+      DB_TLS_MODE: disable
+      DB_ALLOW_PUBLIC_KEY_RETRIEVAL: "true"
+      WORKER_ENABLED: "true"
+      REDIS_URL: redis://redis:6379
+      WORKER_QUEUE_NAME: default
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    image: skelton-monorepo-starter:local
+    profiles: ["scheduler"]
+    command: ["/app/api/scheduler"]
+    environment:
+      APP_ENV: development
+      TZ: UTC
+      SERVICE_NAME: monorepo-starter
+      LOG_LEVEL: info
+      DB_DRIVER: mysql
+      DATABASE_URL: mysql://user:password@mysql:3306/example_service
+      DB_PREPARE: "true"
+      DB_TLS_MODE: disable
+      DB_ALLOW_PUBLIC_KEY_RETRIEVAL: "true"
+      SCHEDULER_ENABLED: "true"
+      SCHEDULER_TIMEZONE: ${SCHEDULER_TIMEZONE:-UTC}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+  redis_data:
