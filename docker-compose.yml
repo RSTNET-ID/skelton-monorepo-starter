@@ -1,9 +1,10 @@
-# Only application processes run here. MySQL and Redis are EXTERNAL.
+# One isolated deployment per folder. MySQL and Redis are EXTERNAL.
+name: ${COMPOSE_PROJECT_NAME:?Set a unique COMPOSE_PROJECT_NAME per deployment}
 # Use: docker compose --env-file .env -f docker-compose.yml config
 x-runtime: &runtime
   APP_ENV: ${APP_ENV:-development}
   TZ: ${TZ:-UTC}
-  SERVICE_NAME: ${SERVICE_NAME:-monorepo-starter}
+  SERVICE_NAME: ${SERVICE_NAME:?Set a unique SERVICE_NAME per deployment}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   DB_DRIVER: mysql
   DATABASE_URL: ${DATABASE_URL:?Set an external MySQL DATABASE_URL in .env}
@@ -15,7 +16,7 @@ x-runtime: &runtime
   DB_TLS_MODE: ${DB_TLS_MODE:-disable}
   DB_ALLOW_PUBLIC_KEY_RETRIEVAL: ${DB_ALLOW_PUBLIC_KEY_RETRIEVAL:-false}
   REDIS_URL: ${REDIS_URL:?Set an external Redis REDIS_URL in .env}
-  REDIS_NAMESPACE: ${REDIS_NAMESPACE:-monorepo-starter:development}
+  REDIS_NAMESPACE: ${REDIS_NAMESPACE:?Set a unique REDIS_NAMESPACE per deployment}
   REDIS_CONNECTION_TIMEOUT_MS: ${REDIS_CONNECTION_TIMEOUT_MS:-5000}
   REDIS_MAX_RETRIES: ${REDIS_MAX_RETRIES:-20}
   WORKER_QUEUE_NAME: ${WORKER_QUEUE_NAME:-default}
@@ -50,7 +51,7 @@ services:
     restart: unless-stopped
     stop_grace_period: 30s
     ports:
-      - "${APP_BIND_HOST:-127.0.0.1}:${APP_PUBLISHED_PORT:-3000}:3000"
+      - "${APP_BIND_HOST:-127.0.0.1}:${APP_PUBLISHED_PORT:?Set the deployment-specific APP_PUBLISHED_PORT}:3000"
     environment:
       <<: *runtime
       PORT: "3000"
