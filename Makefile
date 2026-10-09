@@ -36,7 +36,7 @@ help:
 env-init:
 	@test ! -e .env || { echo ".env already exists; refusing overwrite"; exit 1; }
 	cp .env.example .env
-	@echo "Edit .env before running Docker; example connection strings are placeholders."
+	@echo "Edit .env before running local dev or Docker; connection strings are placeholders."
 
 dev:
 	bun run dev
