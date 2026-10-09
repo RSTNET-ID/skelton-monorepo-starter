@@ -24,9 +24,13 @@
     "docker:up": "docker compose up --build",
     "dev:turbo": "turbo run dev:monorepo --parallel --env-mode=loose",
     "dev:web:turbo": "turbo run dev:monorepo --filter=@rstnet-id/svelte-skeleton --env-mode=loose",
-    "dev:api:turbo": "turbo run dev:monorepo --filter=@rstnet-id/bun-slim-mysql --env-mode=loose"
+    "dev:api:turbo": "turbo run dev:monorepo --filter=@rstnet-id/bun-slim-mysql --env-mode=loose",
+    "query:guard": "bun scripts/query-guard.ts",
+    "query:guard:all": "bun scripts/query-guard.ts --all",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "turbo": "2.11.2"
+    "turbo": "2.11.2",
+    "husky": "^9.1.7"
   }
 }
