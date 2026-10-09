@@ -46,8 +46,8 @@ help:
 	@echo "  make dev-frontend         Start web"
 	@echo "  make dev-backend          Start API"
 	@echo "  make build|check|lint|test|verify"
-	@echo "  make tenants-validate TENANTS_DIR=/opt/apps
-	@echo "  make docker-config        Validate interpolated Compose""
+	@echo "  make tenants-validate TENANTS_DIR=/opt/apps"
+	@echo "  make docker-config        Validate interpolated Compose"
 	@echo "  make docker-smoke         Check running container and readiness"
 	@echo "  make docker-rollback ROLLBACK_TAG=1.0.2  Roll back running container"
 	@echo "  make docker-build         Build ONE combined image"
