@@ -1,10 +1,20 @@
-# Deployment with external MySQL and Redis
+# Single-tenant deployment with external MySQL and Redis
+
+**Invariant:** One deployment = one app container (SvelteKit + Bun API), one dedicated MySQL database, one `.env` and independent Compose project. Deployments share the *image*, not the runtime/database. Optional worker/scheduler containers reuse the deployment image and database. Never introduce application-level `tenant_id` or tenant resolution to solve separation already achieved through dedicated deployments. Still enforce user/role authorization inside the application.
+
 
 ## One image, external dependencies
 
 Docker Compose runs only application processes. It must never provision MySQL or Redis. The web and API execute in the same main container and use one image. Worker and scheduler profiles reuse this image in additional containers, not additional image builds.
 
 The public listener is **container port 3000** (SvelteKit). The backend listens only on **127.0.0.1:3001 inside the main container**. API calls go through the same-origin `/api/*` proxy.
+
+## Separation boundaries
+
+- **Database:** unique database and least-privileged MySQL user for each deployment.
+- **Networking:** host binding/project name per deployment; publish only the SvelteKit port.
+- **Redis:** unique per-deployment namespace; for stronger protection use separate Redis ACL credentials or instances. Shared Redis is infrastructure sharing, not application multi-tenancy.
+- **Caching:** deployment namespace plus authorization-aware keys; no cross-deployment key reuse.
 
 ## Environment setup
 
