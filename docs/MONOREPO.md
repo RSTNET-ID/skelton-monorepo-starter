@@ -86,3 +86,19 @@ Use immutable tested release tags in `IMAGE_TAG`, preferably registry digests or
 5. Run one-shot migrations on a controlled rollout, ideally after taking a verified backup.
 6. Deploy and verify `/health`, API proxy, and optional workers.
 7. Keep a known-good tag and record version/health/rollback procedures per tenant.
+
+## Unique deployment identity on shared VMs
+
+On one VM, each application deployment must have its own `COMPOSE_PROJECT_NAME`, `SERVICE_NAME`, `REDIS_NAMESPACE`, external MySQL database, and host `APP_PUBLISHED_PORT` when sharing the same host bind IP. Internal web/API ports remain 3000 and 3001, regardless of other deployments. Docker Compose fails if the required identities/port are missing; static validation also detects duplicates across deployment folders. Never deploy an untouched `.env.example`.
+
+Create deployment folder and its two files from the **source checkout**, with Bun installed:
+
+```sh
+make deployment-init TENANTS_DIR=/opt/apps TENANT=client-a PORT=3101
+make deployment-init TENANTS_DIR=/opt/apps TENANT=client-b PORT=3102
+make tenants-validate TENANTS_DIR=/opt/apps
+```
+
+The bootstrap initializes deployment-specific Compose project (`app-client-a`), service name (`client-a`), namespace (`client-a:production`), and host port; it deliberately leaves example database and registry values to be replaced. Configure each database independently, then run validation again. The VM only needs Docker Compose and the resulting `.env` + `docker-compose.yml` per folder. Each `.env` should be readable only by the deployment administrator (bootstrap uses mode 0600).
+
+The bootstrap checks planned port assignments in sibling `.env` files, not all OS listeners. Confirm no other host process is using the port, and keep a host-wide allocation record. For multiple host bind IPs, more than one deployment can share a port if their bound addresses do not overlap. Redis namespaces prevent accidental key collision; use Redis ACLs to enforce stronger access boundaries.
