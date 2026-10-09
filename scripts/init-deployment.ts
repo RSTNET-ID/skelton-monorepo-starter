@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const [rootArg, nameArg, portArg] = process.argv.slice(2);
 function die(message: string): never { console.error('ERROR: ' + message); process.exit(1); }
@@ -16,7 +16,7 @@ for (const sibling of existsSync(root) ? readdirSync(root, { withFileTypes: true
   const envPath = join(root, sibling.name, '.env');
   if (!existsSync(envPath)) continue;
   const env = readFileSync(envPath, 'utf8');
-  const has = (key: string, value: string) => new RegExp('^' + key + '=' + value.replace(/[.*+?^\x24{}()|[\]\\]/g, '\\$&') + '\\s*$', 'm').test(env);
+  const has = (key: string, value: string) => env.split(/\r?\n/).some(line => line.trim() === key + '=' + value);
   if (has('APP_PUBLISHED_PORT', String(port))) die('Host port already assigned in ' + sibling.name);
   if (has('COMPOSE_PROJECT_NAME', 'app-' + nameArg)) die('Compose project already assigned in ' + sibling.name);
   if (has('SERVICE_NAME', nameArg)) die('Service name already assigned in ' + sibling.name);
