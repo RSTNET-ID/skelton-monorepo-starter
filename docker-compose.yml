@@ -66,7 +66,9 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=32m,noexec,nosuid,nodev
-    pids_limit: 256
+    pids_limit: ${APP_PIDS_LIMIT:-256}
+    mem_limit: ${APP_MEMORY_LIMIT:-512m}
+    cpus: ${APP_CPU_LIMIT:-1.0}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health"]
       interval: 15s
@@ -88,6 +90,9 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m,noexec,nosuid,nodev
+    pids_limit: ${WORKER_PIDS_LIMIT:-128}
+    mem_limit: ${WORKER_MEMORY_LIMIT:-256m}
+    cpus: ${WORKER_CPU_LIMIT:-0.5}
 
   scheduler:
     <<: *app-image
@@ -103,3 +108,6 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m,noexec,nosuid,nodev
+    pids_limit: ${SCHEDULER_PIDS_LIMIT:-128}
+    mem_limit: ${SCHEDULER_MEMORY_LIMIT:-256m}
+    cpus: ${SCHEDULER_CPU_LIMIT:-0.5}
