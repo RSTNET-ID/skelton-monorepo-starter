@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import type { SQL } from 'bun';
 import { EXAMPLE_CATEGORY_IDS } from '@/modules/example/example.constants';
+import { isUuidV7 } from '@/shared/ids/uuid-v7';
 import type { ExampleRepository } from '@/modules/example/example.repository';
 import type { TransactionContext } from '@/database/transaction';
 
@@ -83,6 +84,7 @@ if (!runMysqlIntegration) {
         description: 'original',
       });
       createdIds.push(created.id);
+      expect(isUuidV7(created.id)).toBe(true);
 
       const fetched = await repository.findById(created.id);
       expect(fetched?.id).toBe(created.id);
