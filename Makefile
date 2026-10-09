@@ -8,7 +8,7 @@ HEALTH_HOST ?= 127.0.0.1
 HEALTH_PORT ?= $(shell sed -n 's/^APP_PUBLISHED_PORT=//p' $(ENV_FILE) 2>/dev/null | tail -n 1)
 HEALTH_PORT := $(if $(HEALTH_PORT),$(HEALTH_PORT),3000)
 
-.PHONY: query-guard hooks-install verify tenants-validate docker-smoke docker-rollback help env-init dev dev-frontend dev-backend build check typecheck lint test \
+.PHONY: deployment-init query-guard hooks-install verify tenants-validate docker-smoke docker-rollback help env-init dev dev-frontend dev-backend build check typecheck lint test \
  docker-config docker-build docker-build-no-cache docker-push \
  docker-dev-up docker-dev-down docker-dev-logs docker-dev-ps \
  docker-prod-pull docker-prod-up docker-prod-down docker-prod-logs docker-prod-ps docker-prod-restart \
@@ -30,6 +30,10 @@ verify:
 	bun run build
 
 # Run from source checkout, pointing at a directory containing tenant subfolders.
+deployment-init:
+	@test -n "$(TENANT)" -a -n "$(PORT)" -a -n "$(TENANTS_DIR)" || { echo "Usage: make deployment-init TENANTS_DIR=/opt/apps TENANT=client-a PORT=3101"; exit 1; }
+	bun scripts/init-deployment.ts $(TENANTS_DIR) $(TENANT) $(PORT)
+
 tenants-validate:
 	bun scripts/validate-tenants.ts $(TENANTS_DIR)
 
@@ -54,6 +58,7 @@ help:
 	@echo "  make dev-frontend         Start web"
 	@echo "  make dev-backend          Start API"
 	@echo "  make build|check|lint|test|verify|query-guard|hooks-install"
+	@echo "  make deployment-init TENANTS_DIR=/opt/apps TENANT=client-a PORT=3101"
 	@echo "  make tenants-validate TENANTS_DIR=/opt/apps"
 	@echo "  make docker-config        Validate interpolated Compose"
 	@echo "  make docker-smoke         Check running container and readiness"
