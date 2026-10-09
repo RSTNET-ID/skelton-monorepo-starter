@@ -41,3 +41,28 @@ make backend-migrate ENV_FILE=.env.prod
 ```
 
 Migration is opt-in by default (`AUTO_MIGRATE=false`), so releases can run it as a controlled one-shot operation. See [deployment documentation](docs/MONOREPO.md) for TLS, secrets and external network requirements.
+
+## Tenant deployment from just two files
+
+Build and publish the single image once in the source repository using `make docker-build` and `make docker-push`. A separate `docker-compose.build.yml` is used only for builds, never for deployments.
+
+Each deployment folder contains only `docker-compose.yml` and `.env`, with an image available in the registry:
+
+```text
+/opt/apps/tenant-a/docker-compose.yml
+/opt/apps/tenant-a/.env
+/opt/apps/tenant-b/docker-compose.yml
+/opt/apps/tenant-b/.env
+```
+
+Set distinct `COMPOSE_PROJECT_NAME`, `APP_PUBLISHED_PORT` on a shared host IP, `SERVICE_NAME`, `REDIS_NAMESPACE` and database credentials for every tenant. All tenant containers may use exactly the same immutable `REGISTRY_IMAGE:IMAGE_TAG`, with web internal port 3000 and API internal port 3001.
+
+From inside a tenant folder:
+
+```sh
+docker compose --env-file .env config --quiet
+docker compose --env-file .env pull
+docker compose --env-file .env up -d --no-build
+```
+
+This requires **no Dockerfile, source checkout, Makefile, MySQL container or Redis container** in the tenant folder. For reverse proxy setups, bind each tenant to a different loopback host port and route each tenant domain accordingly.
