@@ -1,0 +1,41 @@
+# 1. Version Control & Metadata
+.git/
+.gitignore
+.github/
+
+# 2. Dependencies & Build Artifacts
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# 3. Environment & Local Secrets
+.env
+.env.*
+*.pem
+*.key
+secrets/
+
+# 4. Documentation & Test Suites
+docs/
+tests/
+*.md
+AGENTS.md
+
+# 5. Local Storage & Backups
+tmp/
+temp/
+postgres_data/
+mysql_data/
+redis_data/
+
+# 6. Logs & Debug Artifacts
+*.log
+logs/
+coverage/
+.specstory/
+.vscode/
+.idea/
+.bun/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,47 @@
+# Specstory AI
+.specstory
+
+# Dependencies
+node_modules/
+.bun/
+
+# Environment variables and mounted/local secrets
+.env
+.env.*
+!.env.example
+secrets/
+
+# Build output
+dist/
+build/
+
+# Bun lockfile is committed for reproducible installs.
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Docker volumes (local dev)
+postgres_data/
+mysql_data/
+redis_data/
+
+# Migration generated lock (if any)
+*.migration-lock
