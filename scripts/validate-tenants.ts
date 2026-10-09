@@ -54,16 +54,18 @@ function tenant(folder: string): Tenant {
   const image = required(env, "REGISTRY_IMAGE", folder);
   const tag = required(env, "IMAGE_TAG", folder);
   if (tag === "latest" || tag === "local") fail(folder + ": use a tested immutable IMAGE_TAG, not " + tag);
-  if (!/^https?:/.test(database) && !/^mysql:/.test(database)) fail(folder + ": DATABASE_URL must be a MySQL connection URL");
+  if (!/^mysql:/.test(database)) fail(folder + ": DATABASE_URL must use mysql://");
+  let databaseIdentity: string;
   try {
     const url = new URL(database);
     if (!url.hostname || !url.pathname || url.pathname === "/") fail(folder + ": database host/name required");
+    databaseIdentity = url.hostname.toLowerCase() + ":" + (url.port || "3306") + url.pathname;
   } catch {
     fail(folder + ": malformed DATABASE_URL");
   }
   if (env.APP_ENV === "production" && env.DB_TLS_MODE !== "verify-full") fail(folder + ": production requires DB_TLS_MODE=verify-full");
   if (env.APP_ENV === "production" && env.EXAMPLE_ROUTES_ENABLED === "true") fail(folder + ": production example routes must be disabled");
-  return { folder, project, bind, port, namespace, database, image, tag };
+  return { folder, project, bind, port, namespace, database: databaseIdentity, image, tag };
 }
 
 function overlaps(a: string, b: string): boolean {
