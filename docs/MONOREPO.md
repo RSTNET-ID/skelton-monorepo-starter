@@ -102,3 +102,7 @@ make tenants-validate TENANTS_DIR=/opt/apps
 The bootstrap initializes deployment-specific Compose project (`app-client-a`), service name (`client-a`), namespace (`client-a:production`), and host port; it deliberately leaves example database and registry values to be replaced. Configure each database independently, then run validation again. The VM only needs Docker Compose and the resulting `.env` + `docker-compose.yml` per folder. Each `.env` should be readable only by the deployment administrator (bootstrap uses mode 0600).
 
 The bootstrap checks planned port assignments in sibling `.env` files, not all OS listeners. Confirm no other host process is using the port, and keep a host-wide allocation record. For multiple host bind IPs, more than one deployment can share a port if their bound addresses do not overlap. Redis namespaces prevent accidental key collision; use Redis ACLs to enforce stronger access boundaries.
+
+### Container naming
+
+Do not set a static `container_name` in the canonical Compose file. Docker Compose automatically generates unique names based on each deployment's mandatory `COMPOSE_PROJECT_NAME` plus service and replica index, e.g. `app-client-a-app-1`. Unique project names give unique default container names and retain service scaling compatibility. `SERVICE_NAME` is an application/Redis identity, not the Docker container name. Do not add a custom `container_name` unless an externally imposed integration truly requires it, and document the scaling restriction.
