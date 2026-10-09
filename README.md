@@ -66,3 +66,16 @@ docker compose --env-file .env up -d --no-build
 ```
 
 This requires **no Dockerfile, source checkout, Makefile, MySQL container or Redis container** in the tenant folder. For reverse proxy setups, bind each tenant to a different loopback host port and route each tenant domain accordingly.
+
+## Local development without Docker: one root .env
+
+Use the root `.env` for both applications; app-specific `.env` files are not required. `bun run dev` loads `.env` explicitly before Turborepo starts both processes, and Turborepo forwards the environment variables.
+
+```sh
+cp .env.example .env
+# Edit external DATABASE_URL and optionally REDIS_URL
+bun install
+make dev
+```
+
+Local web: `http://127.0.0.1:5173`; local API: `http://127.0.0.1:3001`; browser API access stays at `/api` via the web proxy. Local development requires no Docker. The root `.env` is not embedded into the production Docker image. In a tenant VM, only `.env` and `docker-compose.yml` are required, with runtime variables supplied by Compose and image pulled from registry.
