@@ -1,5 +1,6 @@
 import type { SQL } from 'bun';
 import { getDbClient } from '@/database/client';
+import { uuidV7 } from '@/shared/ids/uuid-v7';
 import { runTransaction, type TransactionContext } from '@/database/transaction';
 import type {
   ExampleItem,
@@ -112,7 +113,7 @@ export class ExampleRepository {
     const sql: SQL = executor;
     const now = new Date();
     const newItem: ExampleItem = {
-      id: crypto.randomUUID(),
+      id: uuidV7(),
       name: data.name,
       description: data.description ?? null,
       status: 'active',
