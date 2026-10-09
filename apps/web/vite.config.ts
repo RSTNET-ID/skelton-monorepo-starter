@@ -11,7 +11,12 @@ export default defineConfig(({ mode }) => {
 			tailwindcss(),
 			sveltekit({
 				adapter: adapter({
-					precompress: true
+					precompress: true,
+					buildOptions: {
+						compile: true,
+						minify: true,
+						sourcemap: 'none'
+					}
 				}),
 				csp: {
 					mode: 'auto',

@@ -1,5 +1,5 @@
 {
-  "name": "bun-hono-microservice-starter",
+  "name": "@rstnet-id/bun-slim-mysql",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -19,7 +19,6 @@
     "migrate:down": "bun database/migrate.ts down",
     "migrate:refresh": "bun database/migrate.ts refresh",
     "migrate:status": "bun database/migrate.ts status",
-    "prepare": "husky",
     "test:unit": "APP_ENV=test EXAMPLE_ROUTES_ENABLED=true DB_DRIVER=mysql DATABASE_URL=mysql://test:test@127.0.0.1:3306/test bun test tests/unit",
     "test:contract": "APP_ENV=test EXAMPLE_ROUTES_ENABLED=true DB_DRIVER=mysql DATABASE_URL=mysql://test:test@127.0.0.1:3306/test bun test tests/contract",
     "test:integration": "bun test tests/integration",
@@ -44,7 +43,8 @@
     "build:doctor": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./scripts/doctor.ts --outfile dist/doctor",
     "build:migrate": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./database/migrate.ts --outfile dist/migrate",
     "build:seed": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./database/seed.ts --outfile dist/seed",
-    "db:registry:generate": "bun database/registry-generator.ts"
+    "db:registry:generate": "bun database/registry-generator.ts",
+    "ci": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build"
   },
   "dependencies": {
     "hono": "^4.7.0",
@@ -72,12 +72,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RSTNET-ID/bun-slim.git"
+    "url": "git+https://github.com/RSTNET-ID/skelton-monorepo-starter.git",
+    "directory": "apps/api"
   },
   "bugs": {
-    "url": "https://github.com/RSTNET-ID/bun-slim/issues"
+    "url": "https://github.com/RSTNET-ID/skelton-monorepo-starter/issues"
   },
-  "homepage": "https://github.com/RSTNET-ID/bun-slim#readme",
+  "homepage": "https://github.com/RSTNET-ID/skelton-monorepo-starter/tree/main/apps/api",
   "keywords": [
     "bun",
     "hono",
@@ -85,5 +86,6 @@
     "microservice",
     "starter",
     "docker"
-  ]
+  ],
+  "packageManager": "bun@1.4.2"
 }

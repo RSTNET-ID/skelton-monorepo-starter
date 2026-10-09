@@ -1,0 +1,29 @@
+{
+  "name": "@rstnet-id/skelton-monorepo-starter",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "bun": ">=1.4.0"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:web": "turbo run dev --filter=@rstnet-id/svelte-skeleton",
+    "dev:api": "turbo run dev --filter=@rstnet-id/bun-slim-mysql",
+    "build": "turbo run build",
+    "check": "turbo run check typecheck",
+    "lint": "turbo run lint",
+    "format:check": "turbo run format:check",
+    "test": "turbo run test",
+    "test:unit": "turbo run test:unit",
+    "ci": "turbo run ci",
+    "docker:build": "docker build -t skelton-monorepo-starter:local .",
+    "docker:up": "docker compose up --build"
+  },
+  "devDependencies": {
+    "turbo": "2.11.2"
+  }
+}

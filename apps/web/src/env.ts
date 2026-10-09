@@ -34,7 +34,12 @@ function timeout(value: string | undefined): number {
 export const variables = defineEnvVars({
 	API_BASE_URL: {
 		description: 'Private base URL used for server-to-server calls to the Bun backend.',
-		schema: (value) => httpUrl(value, 'http://127.0.0.1:3000/api')
+		schema: (value) => httpUrl(value, 'http://127.0.0.1:3001/api')
+	},
+	API_PROXY_TARGET: {
+		public: false,
+		description: 'Internal origin used by the same-origin /api reverse proxy.',
+		schema: (value) => httpUrl(value, 'http://127.0.0.1:3001')
 	},
 	API_TIMEOUT_MS: {
 		description: 'Timeout in milliseconds for backend API requests.',
