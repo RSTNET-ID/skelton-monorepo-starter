@@ -1,6 +1,9 @@
 # Repository Coding Rules
 
 ## Architecture
+- **Single-tenant per deployment is mandatory:** one application container with FE + BE, one dedicated external MySQL database, and one deployment-specific root `.env`. Reuse the same image across deployments; do not treat one deployment as a shared multi-tenant application.
+- **Do not implement application-level multi-tenancy by default:** no `tenant_id` columns/scopes, tenant resolver, tenant middleware, tenant-based dynamic database routing, or JWT/domain-derived tenant selection. Add those only through an explicitly approved architecture change.
+- Extra worker/scheduler roles, when enabled, reuse the same image and deployment database; they can run in separate containers and are not additional tenants.
 - Bun + Turborepo with `apps/web` (SvelteKit) and `apps/api` (Bun/Hono MySQL 8).
 - One canonical production Dockerfile/image at repository root. Default container hosts FE and BE.
 - Web binds container 3000; internal API binds loopback 3001 and is reached via same-origin `/api`.
@@ -12,9 +15,9 @@
 - Use controlled one-shot DB migrations for production; do not automatically seed production.
 
 ## Backend
-- MySQL 8 and external Redis, with isolated namespace on shared Redis.
+- MySQL 8 per deployment and optional external Redis, with a unique Redis namespace per deployment. Redis namespaces are logical collision prevention, not a substitute for ACLs.
 - Cursor pagination instead of OFFSET; always parameterized SQL and bounded queries.
-- Validate untrusted input, isolate tenant access, never log secrets/JWTs/cookies.
+- Validate untrusted input, enforce user/role authorization within the deployment, never log secrets/JWTs/cookies.
 - Keep worker, scheduler, migrations, and observability available in same app image.
 
 ## Frontend
@@ -39,11 +42,11 @@
 - No N+1: never issue queries per item in collection loops. Use bounded batch queries, joins/prefetch, aggregates; add query-count tests for collection endpoints and verify with realistic cardinality. Also check N+1 HTTP requests.
 - Every new query or module requires an index review: WHERE equality/range, joins, ORDER BY, cursor pagination, cardinality/selectivity, composite-index leftmost prefix, unique constraints and write overhead. Match cursor predicates to indexes and validate significant queries with EXPLAIN ANALYZE and representative data. Do not blindly index every column.
 - Prefer cursor pagination with stable ordering and unique tie-breaker; no OFFSET on unbounded collections.
-- Query caching: prevent duplicated in-flight requests, cache frequently reused safe reads with explicit TTL and capacity bounds, key by tenant/security scope and normalized query parameters, and invalidate on writes. Use Redis only with isolated namespace and appropriate ACLs. No caching of transaction-critical ledger/payment state, sensitive authorization data, or other rapidly changing values without a correctness design.
+- Query caching: prevent duplicated in-flight requests, cache frequently reused safe reads with explicit TTL and capacity bounds, key by deployment namespace, authorization scope and normalized query parameters, and invalidate on writes. Use Redis only with isolated namespace and appropriate ACLs. No caching of transaction-critical ledger/payment state, sensitive authorization data, or other rapidly changing values without a correctness design.
 - Frontend must deduplicate identical concurrent fetches and avoid repeated requests to the same endpoint caused by component lifecycle. Ensure cache hit/miss, freshness, invalidation, and failure behavior are tested.
 
 ## Feature impact review
-Before implementing each task, analyze which other modules, callers, database relationships, schema migrations, queries, indexes, API contracts, DTOs, jobs, cache keys/invalidation, authorization rules, tenancy, frontend screens, observability, and deployment rollback are impacted. Record affected modules, risks, expected query counts and regression tests in the change description.
+Before implementing each task, analyze which other modules, callers, database relationships, schema migrations, queries, indexes, API contracts, DTOs, jobs, cache keys/invalidation, authorization rules, deployment configuration, frontend screens, observability, and deployment rollback are impacted. Record affected modules, risks, expected query counts and regression tests in the change description.
 
 ## Quality gates
 - Run `make query-guard` and `make verify`. Static SQL guard blocks obvious `SELECT *`/`alias.*` projections and surfaces suspicious loop+query patterns for code review; no static regex/AST scan can guarantee the absence of N+1. Use integration query-count tests and review on collection endpoints.
