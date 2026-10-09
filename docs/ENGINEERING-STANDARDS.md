@@ -1,5 +1,9 @@
 # Engineering standards and review checklist
 
+## Deployment boundary
+
+This is **single-tenant per deployment**, not shared-database multitenancy. Every deployment uses one app instance and its own MySQL database configured via its own `.env`. Application tables must not acquire a `tenant_id` solely for deployment separation. Do not add tenant-aware repositories, middleware, domain/JWT tenant detection or dynamic database selection. Keep user/role authorization within each instance. Redis may be physically shared, but namespace keys per deployment and use separate ACL credentials when needed.
+
 ## Schema conventions (new migrations)
 
 - Plural snake_case table names, singular entity-prefixed PKs: `users.user_id`, `orders.order_id`, `payment_intents.payment_intent_id`.
@@ -15,7 +19,7 @@
 - Reject N+1 by design. Prefer bounded batching and joins; use query-count instrumentation in integration tests for 1, 10, and 100 records, and assert the number of SQL roundtrips does not grow linearly with rows.
 - Every new endpoint specifies a bounded response limit and cursor (when collecting rows); stable tie-break ordering and supporting composite indexes.
 - Document expected WHERE, JOIN, ORDER BY, uniqueness, cardinality, cost and index layout for each changed query. Validate meaningful plans using EXPLAIN ANALYZE against realistic MySQL 8 fixtures. Consider unnecessary index write amplification.
-- Detect repeated identical queries and API requests. Cache only safe reads after measuring; prefer request-scope dedup first, then bounded TTL caches if needed. Scope keys by tenant identity, authorization scope, normalized params and schema/version; define invalidation on writes. Avoid caching auth decisions and ledger/payment states without consistency guarantees.
+- Detect repeated identical queries and API requests. Cache only safe reads after measuring; prefer request-scope dedup first, then bounded TTL caches if needed. Scope keys by deployment namespace, authorization scope, normalized params and schema/version; define invalidation on writes. Avoid caching auth decisions and ledger/payment states without consistency guarantees.
 - Monitor query count, p95 latency, cache hit/miss, invalidation and slow queries. Avoid logging PII or SQL parameters containing secrets.
 
 ## Impact analysis template
@@ -25,7 +29,7 @@ For every feature or refactor document:
 2. Schema/migration, index and query plans, PK/FK and API/DTO compatibility.
 3. N+1 risk, batching strategy and expected query count for collection sizes.
 4. Cache strategy: why, key scope, TTL, invalidation and freshness guarantees.
-5. Tenant isolation, permission rules, job/events/webhook behavior.
+5. Deployment database ownership, permission rules, job/events/webhook behavior (no tenant resolver or tenant_id by default).
 6. Frontend dedup, loading/error and localization consequences.
 7. Unit/integration/contract and regression tests; observability and rollback steps.
 
