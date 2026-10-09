@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "bun-hono-microservice-starter",
+      "name": "@rstnet-id/bun-slim-mysql",
       "dependencies": {
         "hono": "^4.7.0",
         "zod": "^3.24.2",
