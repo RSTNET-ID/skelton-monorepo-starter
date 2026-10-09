@@ -87,3 +87,7 @@ From the source checkout, run `make verify` before building the image. `make ten
 All roles have configurable CPU, memory, and PID limits in root `.env.example`. For production use an immutable `IMAGE_TAG`, retain the previous release, and test the new image in staging. After deployment, `make docker-smoke ENV_FILE=.env.prod` checks Compose and aggregate HTTP readiness. To roll back a running container from the source checkout: `make docker-rollback ROLLBACK_TAG=<previous-tag> ENV_FILE=.env.prod`; restore `IMAGE_TAG` in the tenant env file too or the next deploy will revert the rollback. Tenant folders without a Makefile can restore the env tag and run `docker compose --env-file .env up -d --no-build --pull always app` directly.
 
 Release instructions, limitations, and rollback precautions: [MONOREPO deployment runbook](docs/MONOREPO.md).
+
+## Coding and database rules
+
+New tables use plural snake_case names and singular entity-named UUIDv7 PKs (for example `users.user_id`); no production SELECT wildcard, no N+1, mandatory index planning and documented cache invalidation/feature impact. Husky pre-commit runs staged SQL projection guard. Run `make query-guard` and `make verify`. See [engineering standards](docs/ENGINEERING-STANDARDS.md) and [coding rules](AGENTS.md).
