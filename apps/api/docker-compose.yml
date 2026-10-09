@@ -1,0 +1,184 @@
+# DEVELOPMENT-ONLY compose baseline. Do not deploy this file unchanged to production.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    stop_grace_period: 25s
+    mem_limit: 512m
+    cpus: 1.0
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      APP_ENV: development
+      TZ: UTC
+      SERVICE_NAME: example-service
+      PORT: 3000
+      LOG_LEVEL: info
+      SERVER_HOST: 0.0.0.0
+      SERVER_IDLE_TIMEOUT_SECONDS: 15
+      MAX_REQUEST_BODY_BYTES: 1048576
+      SHUTDOWN_TIMEOUT_MS: 15000
+      SHUTDOWN_DRAIN_DELAY_MS: 1000
+      SECURITY_HEADERS_ENABLED: "true"
+      METRICS_ENABLED: "false"
+      PROCESS_HEALTH_PORT: 9465
+      EXAMPLE_ROUTES_ENABLED: "true"
+      OUTBOUND_HTTP_TIMEOUT_MS: 5000
+      OUTBOUND_HTTP_MAX_RETRIES: 2
+      OUTBOUND_HTTP_RETRY_BASE_MS: 100
+      DB_DRIVER: mysql
+      DATABASE_URL: mysql://user:password@mysql:3306/example_service
+      DB_POOL_MAX: 10
+      DB_IDLE_TIMEOUT_SECONDS: 30
+      DB_CONNECTION_TIMEOUT_SECONDS: 10
+      DB_MAX_LIFETIME_SECONDS: 0
+      DB_PREPARE: "true"
+      DB_TLS_MODE: disable
+      DB_ALLOW_PUBLIC_KEY_RETRIEVAL: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    pids_limit: 256
+    networks:
+      - runtime
+      - database
+      - queue
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health/ready"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    command: ["./migrate", "up"]
+    mem_limit: 256m
+    cpus: 0.5
+    environment:
+      APP_ENV: development
+      TZ: UTC
+      SERVICE_NAME: example-service
+      LOG_LEVEL: info
+      DB_DRIVER: mysql
+      DATABASE_URL: mysql://user:password@mysql:3306/example_service
+      MIGRATION_DATABASE_URL: mysql://user:password@mysql:3306/example_service
+      DB_POOL_MAX: 2
+      DB_PREPARE: "true"
+      DB_TLS_MODE: disable
+      DB_ALLOW_PUBLIC_KEY_RETRIEVAL: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=8m,noexec,nosuid,nodev
+    pids_limit: 128
+    networks:
+      - database
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  seed:
+    profiles: ["seed"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    command: ["./seed", "run"]
+    mem_limit: 256m
+    cpus: 0.5
+    environment:
+      APP_ENV: development
+      TZ: UTC
+      SERVICE_NAME: example-service
+      LOG_LEVEL: info
+      DB_DRIVER: mysql
+      DATABASE_URL: mysql://user:password@mysql:3306/example_service
+      DB_POOL_MAX: 2
+      DB_PREPARE: "true"
+      DB_TLS_MODE: disable
+      DB_ALLOW_PUBLIC_KEY_RETRIEVAL: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=8m,noexec,nosuid,nodev
+    pids_limit: 128
+    networks:
+      - database
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    stop_grace_period: 30s
+    command: ["--default-time-zone=+00:00"]
+    environment:
+      TZ: UTC
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: example_service
+      MYSQL_ROOT_PASSWORD: root-password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uuser -ppassword --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mysql_data:
+
+networks:
+  runtime:
+  database:
+    internal: true
+  queue:
+    internal: true

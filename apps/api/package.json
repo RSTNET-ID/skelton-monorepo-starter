@@ -1,0 +1,89 @@
+{
+  "name": "bun-hono-microservice-starter",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "build": "bun run db:registry:generate && bun run build:server && bun run build:worker && bun run build:scheduler && bun run build:job-dead && bun run build:doctor && bun run build:migrate && bun run build:seed",
+    "start": "./dist/server",
+    "start:dev": "bun src/server.ts",
+    "route:list": "bun scripts/route-list.ts",
+    "test": "APP_ENV=test EXAMPLE_ROUTES_ENABLED=true DB_DRIVER=mysql DATABASE_URL=mysql://test:test@127.0.0.1:3306/test bun test tests/unit tests/contract",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ tests/ database/ scripts/",
+    "lint:fix": "eslint src/ tests/ database/ scripts/ --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"database/**/*.ts\" \"scripts/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"database/**/*.ts\" \"scripts/**/*.ts\"",
+    "migrate": "bun database/migrate.ts",
+    "migrate:up": "bun database/migrate.ts up",
+    "migrate:down": "bun database/migrate.ts down",
+    "migrate:refresh": "bun database/migrate.ts refresh",
+    "migrate:status": "bun database/migrate.ts status",
+    "prepare": "husky",
+    "test:unit": "APP_ENV=test EXAMPLE_ROUTES_ENABLED=true DB_DRIVER=mysql DATABASE_URL=mysql://test:test@127.0.0.1:3306/test bun test tests/unit",
+    "test:contract": "APP_ENV=test EXAMPLE_ROUTES_ENABLED=true DB_DRIVER=mysql DATABASE_URL=mysql://test:test@127.0.0.1:3306/test bun test tests/contract",
+    "test:integration": "bun test tests/integration",
+    "build:server": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./src/server.ts --outfile dist/server",
+    "build:worker": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./src/worker.ts --outfile dist/worker",
+    "worker:dev": "bun src/worker.ts",
+    "audit:prod": "bun audit --prod --audit-level=high",
+    "release:check": "bun scripts/release-check.ts",
+    "seed": "bun database/seed.ts run",
+    "seed:run": "bun database/seed.ts run",
+    "seed:create": "bun database/seed.ts create",
+    "build:scheduler": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./src/scheduler.ts --outfile dist/scheduler",
+    "scheduler:dev": "bun src/scheduler.ts",
+    "job:dead": "bun scripts/job-dead.ts",
+    "job:dead:list": "bun scripts/job-dead.ts list",
+    "job:dead:show": "bun scripts/job-dead.ts show",
+    "job:dead:replay": "bun scripts/job-dead.ts replay",
+    "job:dead:purge": "bun scripts/job-dead.ts purge",
+    "build:job-dead": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./scripts/job-dead.ts --outfile dist/job-dead",
+    "doctor": "bun scripts/doctor.ts",
+    "doctor:offline": "bun scripts/doctor.ts --offline",
+    "build:doctor": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./scripts/doctor.ts --outfile dist/doctor",
+    "build:migrate": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./database/migrate.ts --outfile dist/migrate",
+    "build:seed": "bun build --compile --minify --no-compile-autoload-dotenv --no-compile-autoload-bunfig ./database/seed.ts --outfile dist/seed",
+    "db:registry:generate": "bun database/registry-generator.ts"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@typescript-eslint/eslint-plugin": "^8.71.0",
+    "@typescript-eslint/parser": "^8.71.0",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.7.3"
+  },
+  "lint-staged": {
+    "**/*.ts": [
+      "eslint --fix",
+      "prettier --write",
+      "bash scripts/typecheck-staged.sh"
+    ]
+  },
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RSTNET-ID/bun-slim.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RSTNET-ID/bun-slim/issues"
+  },
+  "homepage": "https://github.com/RSTNET-ID/bun-slim#readme",
+  "keywords": [
+    "bun",
+    "hono",
+    "typescript",
+    "microservice",
+    "starter",
+    "docker"
+  ]
+}
