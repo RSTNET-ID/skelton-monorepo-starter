@@ -8,14 +8,21 @@ HEALTH_HOST ?= 127.0.0.1
 HEALTH_PORT ?= $(shell sed -n 's/^APP_PUBLISHED_PORT=//p' $(ENV_FILE) 2>/dev/null | tail -n 1)
 HEALTH_PORT := $(if $(HEALTH_PORT),$(HEALTH_PORT),3000)
 
-.PHONY: verify tenants-validate docker-smoke docker-rollback help env-init dev dev-frontend dev-backend build check typecheck lint test \
+.PHONY: query-guard hooks-install verify tenants-validate docker-smoke docker-rollback help env-init dev dev-frontend dev-backend build check typecheck lint test \
  docker-config docker-build docker-build-no-cache docker-push \
  docker-dev-up docker-dev-down docker-dev-logs docker-dev-ps \
  docker-prod-pull docker-prod-up docker-prod-down docker-prod-logs docker-prod-ps docker-prod-restart \
  docker-worker-up docker-scheduler-up docker-logs-api docker-logs-worker docker-logs-scheduler docker-health \
  backend-migrate backend-seed backend-test backend-audit backend-typecheck backend-build clean
 
+query-guard:
+	bun run query:guard
+
+hooks-install:
+	bun run prepare
+
 verify:
+	bun run query:guard
 	bun run check
 	bun run lint
 	bun run test:unit
@@ -45,7 +52,7 @@ help:
 	@echo "  make dev                  Run web and API via Turborepo"
 	@echo "  make dev-frontend         Start web"
 	@echo "  make dev-backend          Start API"
-	@echo "  make build|check|lint|test|verify"
+	@echo "  make build|check|lint|test|verify|query-guard|hooks-install"
 	@echo "  make tenants-validate TENANTS_DIR=/opt/apps"
 	@echo "  make docker-config        Validate interpolated Compose"
 	@echo "  make docker-smoke         Check running container and readiness"
