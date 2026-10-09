@@ -10,9 +10,9 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --parallel",
-    "dev:web": "turbo run dev --filter=@rstnet-id/svelte-skeleton",
-    "dev:api": "turbo run dev --filter=@rstnet-id/bun-slim-mysql",
+    "dev": "turbo run dev:monorepo --parallel",
+    "dev:web": "turbo run dev:monorepo --filter=@rstnet-id/svelte-skeleton",
+    "dev:api": "turbo run dev:monorepo --filter=@rstnet-id/bun-slim-mysql",
     "build": "turbo run build",
     "check": "turbo run check typecheck",
     "lint": "turbo run lint",

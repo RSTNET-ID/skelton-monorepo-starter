@@ -92,6 +92,7 @@ const web = Bun.spawn({
 });
 
 let stopping = false;
+let requestedShutdown = false;
 
 function stopChildren(signal: 'SIGINT' | 'SIGTERM') {
   if (stopping) return;
@@ -100,8 +101,14 @@ function stopChildren(signal: 'SIGINT' | 'SIGTERM') {
   if (web.exitCode === null) web.kill(signal);
 }
 
-process.on('SIGTERM', () => stopChildren('SIGTERM'));
-process.on('SIGINT', () => stopChildren('SIGINT'));
+process.on('SIGTERM', () => {
+  requestedShutdown = true;
+  stopChildren('SIGTERM');
+});
+process.on('SIGINT', () => {
+  requestedShutdown = true;
+  stopChildren('SIGINT');
+});
 
 const firstExit = await Promise.race([
   api.exited.then((code) => ({ name: 'api', code })),
@@ -116,4 +123,4 @@ if (!stopping) {
 }
 
 await Promise.allSettled([api.exited, web.exited]);
-process.exit(stopping ? 0 : firstExit.code || 1);
+process.exit(requestedShutdown ? 0 : firstExit.code || 1);
