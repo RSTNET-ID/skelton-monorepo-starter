@@ -23,6 +23,7 @@ hooks-install:
 
 verify:
 	bun run query:guard
+	bun run query:guard:test
 	bun run check
 	bun run lint
 	bun run test:unit
