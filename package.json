@@ -10,9 +10,9 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "turbo run dev:monorepo --parallel",
-    "dev:web": "turbo run dev:monorepo --filter=@rstnet-id/svelte-skeleton",
-    "dev:api": "turbo run dev:monorepo --filter=@rstnet-id/bun-slim-mysql",
+    "dev": "bun --env-file=.env run dev:turbo",
+    "dev:web": "bun --env-file=.env run dev:web:turbo",
+    "dev:api": "bun --env-file=.env run dev:api:turbo",
     "build": "turbo run build",
     "check": "turbo run check typecheck",
     "lint": "turbo run lint",
@@ -21,7 +21,10 @@
     "test:unit": "turbo run test:unit",
     "ci": "turbo run ci",
     "docker:build": "docker build -t skelton-monorepo-starter:local .",
-    "docker:up": "docker compose up --build"
+    "docker:up": "docker compose up --build",
+    "dev:turbo": "turbo run dev:monorepo --parallel --env-mode=loose",
+    "dev:web:turbo": "turbo run dev:monorepo --filter=@rstnet-id/svelte-skeleton --env-mode=loose",
+    "dev:api:turbo": "turbo run dev:monorepo --filter=@rstnet-id/bun-slim-mysql --env-mode=loose"
   },
   "devDependencies": {
     "turbo": "2.11.2"
