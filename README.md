@@ -91,3 +91,7 @@ Release instructions, limitations, and rollback precautions: [MONOREPO deploymen
 ## Coding and database rules
 
 New tables use plural snake_case names and singular entity-named UUIDv7 PKs (for example `users.user_id`); no production SELECT wildcard, no N+1, mandatory index planning and documented cache invalidation/feature impact. Husky pre-commit runs staged SQL projection guard. Run `make query-guard` and `make verify`. See [engineering standards](docs/ENGINEERING-STANDARDS.md) and [coding rules](AGENTS.md).
+
+## Tenancy model
+
+**One deployment = one application container + one dedicated MySQL database + one `.env`.** The same built image is deployed repeatedly into isolated Compose projects and tenant folders. No application-side tenant resolver, `tenant_id` schema column, shared-database filters or tenant middleware is required. Worker/scheduler profiles are optional extra processes for the same deployment. Database grants and Redis ACLs/namespaces still need appropriate infrastructure boundaries.
