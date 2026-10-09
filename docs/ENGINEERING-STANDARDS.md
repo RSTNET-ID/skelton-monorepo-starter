@@ -43,3 +43,13 @@ bun run query:guard:all
 Husky pre-commit invokes `bun run query:guard` to inspect staged API TypeScript/SQL additions. The guard rejects easily recognized SELECT wildcard projections and does not purport to parse every dynamic SQL variant. A reviewer must look for column projections across multiline/dynamic SQL and N+1 patterns. `make verify` runs the guard, type checks, lint, unit tests, and builds. This gate does not substitute for live database query-count tests and EXPLAIN ANALYZE. Keep existing historical migrations immutable until deliberate versioned migration is approved.
 
 Note: root Bun lockfile needs to be generated and committed after an install in a Bun-enabled environment. Hooks are not active on GitHub solely because their files exist: developers must run `bun install` and allow `prepare`, or `make hooks-install`. CI is intentionally not enabled to avoid consuming GitHub Actions minutes.
+
+## UUIDv7 implementation
+
+The backend now provides `uuidV7()` and `isUuidV7()` at `apps/api/src/shared/ids/uuid-v7.ts`. New writes in the legacy example module also generate UUIDv7, while historical columns and existing UUIDv4 rows remain valid. Application developers MUST use this helper for new entity primary keys and use `<singular>_id` names for new schemas. The helper implements RFC 9562 version and variant bits using cryptographic randomness. UUIDs generated within one millisecond are not guaranteed strictly monotonic; use a stable secondary ordering where exact creation order matters.
+
+## N+1 query budget test harness
+
+`apps/api/tests/helpers/query-budget.ts` is a unit-test helper for instrumenting an injected query execution boundary. It includes passing batch-query and failing N+1 demonstrations in `tests/unit/shared/database/query-budget.test.ts`. A **real endpoint/database query-count integration test** must instrument the Bun.SQL query invocation boundary or use MySQL performance instrumentation and compare logical request query counts for 1, 10, 100 rows. The demonstration test is not proof that production endpoints are N+1-free. Always test the actual repository's collection methods and joined/batch lookups.
+
+`RUN_MYSQL_INTEGRATION=true bun run --cwd apps/api test:integration` requires a disposable, migrated external MySQL 8 test database. Never run integration tests or automatic migrations against a live tenant production database.
