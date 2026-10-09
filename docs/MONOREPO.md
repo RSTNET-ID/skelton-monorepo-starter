@@ -46,3 +46,33 @@ Registry image reference comes from `REGISTRY_IMAGE` and `IMAGE_TAG` in your cho
 The API validates all runtime environment variables at startup. Empty optional credential variables are intentionally omitted from Compose environment, because passing empty strings can fail strict URL/secret validation. If using special characters in URL usernames or passwords, percent-encode them. Keep TLS CA certificate files mounted/readable at the configured `DB_TLS_CA_FILE` location when needed.
 
 The root `.env.example` is a template, not a deployment credential set.
+
+## Release gates and rollback
+
+For source development without Docker, use one root `.env` and run `make verify` (typecheck, lint, unit tests, builds). No GitHub Actions runners are required.
+
+Before rolling out an image, test it in a staging environment with access to external MySQL/Redis. Confirm the main container starts, `/health` returns success, `/api/*` reaches the backend, migrations work, and worker/scheduler roles operate where enabled. The repo cannot claim these pass until an actual image build and staging deployment have been executed.
+
+To prevent tenant configuration collisions, run from the source checkout:
+
+```sh
+make tenants-validate TENANTS_DIR=/opt/apps
+```
+
+It checks each subfolder's `.env` for duplicated Compose project names, host publish address/port overlaps, Redis namespaces, or identical database URLs. It additionally rejects invalid ports, mutable release tags and unsafe production defaults. This is a static check, not a guarantee of OS-wide port availability or isolation against pre-existing infrastructure. The check tool needs Bun; tenant VM deployments themselves need only Docker Compose and two configuration files.
+
+Use immutable tested release tags in `IMAGE_TAG`, preferably registry digests or unique build IDs, and keep the last known-good image available in the registry. On a failed release, restore `IMAGE_TAG` in the tenant's `.env` to the previous release, then run `docker compose --env-file .env up -d --pull always --no-build app`. Check `docker compose --env-file .env ps` and `curl -fsS http://127.0.0.1:PORT/health`. Restore the previous database schema **only via a separately reviewed migration recovery plan**, never by blindly rolling migrations back. The Makefile `docker-rollback ROLLBACK_TAG=...` target reverts the running image temporarily; update `.env` as well to avoid drift.
+
+## Resource controls
+
+`APP_MEMORY_LIMIT`, `APP_CPU_LIMIT`, `APP_PIDS_LIMIT` and corresponding `WORKER_*` and `SCHEDULER_*` limits control each deployment independently. The example values are provisional; profile actual SSR/API memory together, memory spikes during migrations, and queue concurrency before setting production limits. Keep the external database and Redis per-tenant credentials least-privileged. Redis namespaces are logical key segregation, **not** a security boundary; separate Redis ACL users/databases or instances where strict isolation is required.
+
+## Preflight checks
+
+1. `docker compose --env-file .env config --quiet` inside each tenant directory.
+2. Verify published host ports are not already occupied and reverse-proxy routes use the tenant's published loopback port.
+3. Confirm image tag exists and is supported by the external schema and credentials.
+4. Check database TLS validation and outbound firewall/DNS access.
+5. Run one-shot migrations on a controlled rollout, ideally after taking a verified backup.
+6. Deploy and verify `/health`, API proxy, and optional workers.
+7. Keep a known-good tag and record version/health/rollback procedures per tenant.
