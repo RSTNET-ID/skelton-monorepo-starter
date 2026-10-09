@@ -27,7 +27,8 @@
     "dev:api:turbo": "turbo run dev:monorepo --filter=@rstnet-id/bun-slim-mysql --env-mode=loose",
     "query:guard": "bun scripts/query-guard.ts",
     "query:guard:all": "bun scripts/query-guard.ts --all",
-    "prepare": "husky"
+    "prepare": "husky",
+    "query:guard:test": "bun test scripts/query-guard.test.ts"
   },
   "devDependencies": {
     "turbo": "2.11.2",
