@@ -1,0 +1,8 @@
+---
+description: Core SvelteKit, Bun integration, security and UI conventions
+alwaysApply: true
+---
+
+Read @AGENTS.md as the authoritative project instructions. Use @docs/COMPONENTS.md for reusable UI primitives, @docs/ARCHITECTURE.md for responsibility boundaries, and @docs/BACKEND-INTEGRATION.md for API integration.
+
+Use SvelteKit 3 + Svelte 5 runes, TypeScript strict, Bun, Tailwind 4, server-only private APIs, and accessible native controls. Do not weaken security defaults, add domain logic to frontend components, or claim checks passed without running them.
