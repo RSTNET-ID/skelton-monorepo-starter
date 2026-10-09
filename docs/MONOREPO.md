@@ -1,58 +1,48 @@
-# Monorepo Architecture
+# Deployment with external MySQL and Redis
 
-## Canonical boundaries
+## One image, external dependencies
 
-- `apps/web` owns browser UI, SSR, same-origin API proxying, ID/EN localization, and frontend security headers.
-- `apps/api` owns business rules, persistence, MySQL migrations, queues, schedulers, API security, and observability.
-- Root owns Turborepo orchestration and production container packaging.
+Docker Compose runs only application processes. It must never provision MySQL or Redis. The web and API execute in the same main container and use one image. Worker and scheduler profiles reuse this image in additional containers, not additional image builds.
 
-Do not create a shared package until code or contracts are genuinely consumed by both applications.
+The public listener is **container port 3000** (SvelteKit). The backend listens only on **127.0.0.1:3001 inside the main container**. API calls go through the same-origin `/api/*` proxy.
 
-## Unified image invariant
+## Environment setup
 
-Production packaging has one canonical Dockerfile at repository root. Do not add app-specific production Dockerfiles.
-
-The default container launches two executables under one supervisor:
-
-1. Bun/Hono API on `127.0.0.1:3001`.
-2. SvelteKit on `0.0.0.0:3000`.
-
-SvelteKit owns the public listener and proxies `/api/*` to the loopback API. If either executable exits unexpectedly, the supervisor terminates the other process and the container exits.
-
-`/health` is an aggregate readiness endpoint. It reports unhealthy when the web process is alive but the API/database path is not ready.
-
-## Database migration policy
-
-Development Compose enables `AUTO_MIGRATE=true` so `docker compose up` applies migrations before listeners start.
-
-For staging/production with multiple replicas, disable automatic per-replica migration and run:
-
-```bash
-/app/api/migrate up
+```sh
+cp .env.example .env
+# Update DATABASE_URL, REDIS_URL if using worker/scheduler, app host binding, and credentials
+docker compose --env-file .env config --quiet
+make docker-dev-up
 ```
 
-as a controlled one-shot deployment step using the same image.
+Use `ENV_FILE=.env.prod` with make for staging or production. Keep secrets outside Git. For a production secret file, consider a managed secret store and/or FILE-backed backend credentials; never bake secrets in Docker images.
 
-## Workspace policy
+`APP_BIND_HOST` is **the host interface where Docker publishes SvelteKit**, not the API bind address and not the MySQL hostname. Typical values:
 
-Bun is the package manager and runtime baseline. Turborepo orchestrates root tasks. App-level Bun lockfiles remain committed so Docker build stages can use deterministic standalone installs. The root `bun.lock` should also be committed after the first root `bun install`.
+- `127.0.0.1`: reverse proxy on the same host, preferred default.
+- `0.0.0.0`: publish on all server interfaces; use only with correct firewall/TLS reverse proxy architecture.
+- `192.0.2.10`: bind to a specific configured server interface (replace this documentation address).
 
-## API conventions
+`APP_PUBLISHED_PORT` selects the **host-side** port (for example `8080`). Internal container ports remain 3000/3001. Never point `DATABASE_URL` at `localhost` unless the database is inside that same container, which this project does not support.
 
-- Use cursor pagination for growing collections. Do not add OFFSET pagination to application endpoints.
-- Validate all untrusted input.
-- Authentication and authorization are separate checks.
-- Keep SQL parameterized.
-- Keep queue/Redis keys namespaced.
-- Never log credentials, authorization headers, cookies, JWTs, or secrets.
+External MySQL is configured via `DATABASE_URL` (and optionally `MIGRATION_DATABASE_URL` for migrations). External Redis uses `REDIS_URL`, with an isolated `REDIS_NAMESPACE`. Redis is needed only when enabling worker/scheduler. Allow outbound network access from the Docker host/container to the external systems; configure DNS, database grants, firewall, and TLS with your infrastructure administrator.
 
-## TypeScript conventions
+## Production
 
-Prefer explicit domain/application interfaces and concrete types. Avoid `any`. If an external boundary truly requires unknown data, use `unknown`, validate/narrow it, then convert it to an explicit type.
+Set `APP_ENV=production`, a non-default `SERVICE_NAME`, `DB_TLS_MODE=verify-full`, real secure database credentials, and `EXAMPLE_ROUTES_ENABLED=false`. Supply trusted CA material when necessary. For multiple app replicas, use `AUTO_MIGRATE=false` and run `make backend-migrate ENV_FILE=.env.prod` once as a controlled release step. Never seed production by default.
 
-## Frontend conventions
+```sh
+make docker-config ENV_FILE=.env.prod
+make docker-prod-pull ENV_FILE=.env.prod
+make docker-prod-up ENV_FILE=.env.prod
+```
 
-- UI supports Indonesian (`id`) and English (`en`).
-- Use lightweight icons from the existing Lucide setup. Avoid global icon bundles or large eager preload payloads.
-- Browser API calls use same-origin `/api`.
-- Secrets stay server-only.
+Registry image reference comes from `REGISTRY_IMAGE` and `IMAGE_TAG` in your chosen env file. For example use `REGISTRY_IMAGE=docker.example.internal/team/skelton-monorepo` and a tested immutable release tag. Build/push with `make docker-build ENV_FILE=.env.prod` and `make docker-push ENV_FILE=.env.prod`.
+
+`make docker-health` defaults to localhost and resolves the published port from the chosen env file. If publishing to a specific IP or reverse proxy, set `HEALTH_HOST` explicitly.
+
+## Environment variable notes
+
+The API validates all runtime environment variables at startup. Empty optional credential variables are intentionally omitted from Compose environment, because passing empty strings can fail strict URL/secret validation. If using special characters in URL usernames or passwords, percent-encode them. Keep TLS CA certificate files mounted/readable at the configured `DB_TLS_CA_FILE` location when needed.
+
+The root `.env.example` is a template, not a deployment credential set.

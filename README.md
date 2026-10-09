@@ -1,86 +1,43 @@
 # Skeleton Monorepo Starter
 
-Turborepo monorepo that combines the RSTNET-ID Svelte frontend and the Bun/Hono MySQL v8 backend.
+One Docker image containing SvelteKit 5 frontend and Bun/Hono MySQL 8 backend, managed with Turborepo.
 
-## Source lineage
+- `apps/web`: imported from `RSTNET-ID/svelte-skeleton` main at `a5d2b71acdb91c051d5b69d01008298419ad8fb3`.
+- `apps/api`: imported from `RSTNET-ID/bun-slim` mysql-v8 at `ae12d1b5bdc871a25f357e06498be2be6de514dd`.
 
-- `apps/web`: imported from `RSTNET-ID/svelte-skeleton` `main`, snapshot `a5d2b71acdb91c051d5b69d01008298419ad8fb3`.
-- `apps/api`: imported from `RSTNET-ID/bun-slim` branch `mysql-v8`, snapshot `ae12d1b5bdc871a25f357e06498be2be6de514dd`.
+## Development
 
-## Layout
-
-```text
-apps/
-  web/    SvelteKit 3 + Svelte 5
-  api/    Bun + Hono + MySQL 8
-scripts/
-  container-supervisor.ts
-Dockerfile
-docker-compose.yml
-package.json
-turbo.json
-```
-
-## One production image
-
-The canonical root `Dockerfile` builds both applications into **one image**.
-
-At runtime:
-
-```text
-client
-  |
-  v
-:3000 SvelteKit
-  |  /api/*
-  v
-127.0.0.1:3001 Bun/Hono
-  |
-  v
-MySQL / Redis
-```
-
-Only the SvelteKit listener is public. The API listener is forced to loopback by the container supervisor. Browser API calls stay same-origin at `/api`.
-
-The same image also contains the API worker, scheduler, migration, seed, doctor, and dead-letter tooling binaries. Compose profiles may run those roles as separate containers **without building separate images**.
-
-## Workspace commands
-
-Install the root workspace and generate the root Bun lockfile once:
-
-```bash
+```sh
 bun install
+make dev
 ```
 
-Then:
+Commit the generated root `bun.lock` after the first install. The per-app lockfiles remain in place for reproducible Docker builds.
 
-```bash
-bun run dev
-bun run dev:web
-bun run dev:api
-bun run build
-bun run check
-bun run lint
-bun run test
+## External MySQL and Redis
+
+**Neither MySQL nor Redis is started by Docker Compose.** Both are external managed/shared dependencies configured via URLs. No local database or Redis volumes are created.
+
+```sh
+make env-init
+# Edit .env: DATABASE_URL, REDIS_URL if required, APP_BIND_HOST, APP_PUBLISHED_PORT
+make docker-config
+make docker-build
+make docker-dev-up
+make docker-health
 ```
 
-## Docker
+The default host binding is `127.0.0.1:3000`. Change `APP_BIND_HOST` and `APP_PUBLISHED_PORT` for different host interfaces or external ports; **internal web port 3000 and API loopback port 3001 stay fixed**.
 
-```bash
-docker compose up --build
+The application image is used by both web and API processes under `scripts/container-supervisor.ts`. Separate optional worker/scheduler containers reuse this exact image via profiles; they never introduce another build.
+
+Registry and production commands follow the `wati-crm` Makefile conventions:
+
+```sh
+make docker-build ENV_FILE=.env.prod
+make docker-push ENV_FILE=.env.prod
+make docker-prod-up ENV_FILE=.env.prod
+make backend-migrate ENV_FILE=.env.prod
 ```
 
-Open http://127.0.0.1:3000.
-
-The development Compose file sets `AUTO_MIGRATE=true`, so migrations run before the API and web listeners start.
-
-For multi-replica production deployments, prefer a one-shot migration job and set `AUTO_MIGRATE=false` for normal application replicas.
-
-Optional worker/scheduler profiles reuse the exact same application image:
-
-```bash
-docker compose --profile worker up --build
-docker compose --profile scheduler up --build
-```
-
-See `docs/MONOREPO.md` for architecture and deployment rules.
+Migration is opt-in by default (`AUTO_MIGRATE=false`), so releases can run it as a controlled one-shot operation. See [deployment documentation](docs/MONOREPO.md) for TLS, secrets and external network requirements.

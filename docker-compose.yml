@@ -1,39 +1,71 @@
+# Only application processes run here. MySQL and Redis are EXTERNAL.
+# Use: docker compose --env-file .env -f docker-compose.yml config
+x-runtime: &runtime
+  APP_ENV: ${APP_ENV:-development}
+  TZ: UTC
+  SERVICE_NAME: ${SERVICE_NAME:-monorepo-starter}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DB_DRIVER: mysql
+  DATABASE_URL: ${DATABASE_URL:?Set an external MySQL DATABASE_URL in .env}
+  DB_POOL_MAX: ${DB_POOL_MAX:-10}
+  DB_IDLE_TIMEOUT_SECONDS: ${DB_IDLE_TIMEOUT_SECONDS:-30}
+  DB_CONNECTION_TIMEOUT_SECONDS: ${DB_CONNECTION_TIMEOUT_SECONDS:-10}
+  DB_MAX_LIFETIME_SECONDS: ${DB_MAX_LIFETIME_SECONDS:-0}
+  DB_PREPARE: ${DB_PREPARE:-true}
+  DB_TLS_MODE: ${DB_TLS_MODE:-disable}
+  DB_ALLOW_PUBLIC_KEY_RETRIEVAL: ${DB_ALLOW_PUBLIC_KEY_RETRIEVAL:-false}
+  REDIS_URL: ${REDIS_URL:-}
+  REDIS_NAMESPACE: ${REDIS_NAMESPACE:-monorepo-starter:development}
+  REDIS_CONNECTION_TIMEOUT_MS: ${REDIS_CONNECTION_TIMEOUT_MS:-5000}
+  REDIS_MAX_RETRIES: ${REDIS_MAX_RETRIES:-20}
+  WORKER_QUEUE_NAME: ${WORKER_QUEUE_NAME:-default}
+  WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
+  WORKER_BLOCK_MS: ${WORKER_BLOCK_MS:-1000}
+  WORKER_JOB_TIMEOUT_MS: ${WORKER_JOB_TIMEOUT_MS:-30000}
+  WORKER_MAX_ATTEMPTS: ${WORKER_MAX_ATTEMPTS:-3}
+  WORKER_RETRY_BACKOFF_MS: ${WORKER_RETRY_BACKOFF_MS:-1000}
+  WORKER_STALE_AFTER_MS: ${WORKER_STALE_AFTER_MS:-60000}
+  WORKER_RECLAIM_INTERVAL_MS: ${WORKER_RECLAIM_INTERVAL_MS:-15000}
+  SCHEDULER_TIMEZONE: ${SCHEDULER_TIMEZONE:-UTC}
+  METRICS_ENABLED: ${METRICS_ENABLED:-false}
+  METRICS_HOST: ${METRICS_HOST:-127.0.0.1}
+  METRICS_PORT: ${METRICS_PORT:-9464}
+  PROCESS_HEALTH_PORT: ${PROCESS_HEALTH_PORT:-9465}
+  SECURITY_HEADERS_ENABLED: ${SECURITY_HEADERS_ENABLED:-true}
+  SERVER_IDLE_TIMEOUT_SECONDS: ${SERVER_IDLE_TIMEOUT_SECONDS:-15}
+  MAX_REQUEST_BODY_BYTES: ${MAX_REQUEST_BODY_BYTES:-1048576}
+  SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:-15000}
+  SHUTDOWN_DRAIN_DELAY_MS: ${SHUTDOWN_DRAIN_DELAY_MS:-1000}
+  OUTBOUND_HTTP_TIMEOUT_MS: ${OUTBOUND_HTTP_TIMEOUT_MS:-5000}
+  OUTBOUND_HTTP_MAX_RETRIES: ${OUTBOUND_HTTP_MAX_RETRIES:-2}
+  OUTBOUND_HTTP_RETRY_BASE_MS: ${OUTBOUND_HTTP_RETRY_BASE_MS:-100}
+  EXAMPLE_ROUTES_ENABLED: ${EXAMPLE_ROUTES_ENABLED:-false}
+
+x-app-image: &app-image
+  image: ${REGISTRY_IMAGE:-skelton-monorepo-starter}:${IMAGE_TAG:-local}
+
 services:
   app:
-    image: skelton-monorepo-starter:local
+    <<: *app-image
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
     stop_grace_period: 30s
     ports:
-      - "127.0.0.1:3000:3000"
+      - "${APP_BIND_HOST:-127.0.0.1}:${APP_PUBLISHED_PORT:-3000}:3000"
     environment:
-      APP_ENV: development
-      TZ: UTC
-      SERVICE_NAME: monorepo-starter
-      PORT: 3000
-      API_INTERNAL_PORT: 3001
-      AUTO_MIGRATE: "true"
-      AUTO_SEED: "false"
-      LOG_LEVEL: info
-      EXAMPLE_ROUTES_ENABLED: "true"
-      DB_DRIVER: mysql
-      DATABASE_URL: mysql://user:password@mysql:3306/example_service
-      MIGRATION_DATABASE_URL: mysql://user:password@mysql:3306/example_service
-      DB_POOL_MAX: 10
-      DB_PREPARE: "true"
-      DB_TLS_MODE: disable
-      DB_ALLOW_PUBLIC_KEY_RETRIEVAL: "true"
-      API_TIMEOUT_MS: 10000
-      PUBLIC_API_BASE_URL: /api
-    depends_on:
-      mysql:
-        condition: service_healthy
+      <<: *runtime
+      PORT: "3000"
+      API_INTERNAL_PORT: "3001"
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-false}
+      AUTO_SEED: ${AUTO_SEED:-false}
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:-}
+      API_TIMEOUT_MS: ${API_TIMEOUT_MS:-10000}
+      PUBLIC_API_BASE_URL: "/api"
     security_opt:
       - no-new-privileges:true
-    cap_drop:
-      - ALL
+    cap_drop: [ALL]
     read_only: true
     tmpfs:
       - /tmp:size=32m,noexec,nosuid,nodev
@@ -42,88 +74,35 @@ services:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/health"]
       interval: 15s
       timeout: 5s
-      start_period: 20s
+      start_period: 30s
       retries: 3
 
-  mysql:
-    image: mysql:8.0
-    restart: unless-stopped
-    stop_grace_period: 30s
-    command: ["--default-time-zone=+00:00"]
-    environment:
-      TZ: UTC
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
-      MYSQL_DATABASE: example_service
-      MYSQL_ROOT_PASSWORD: root-password
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uuser -ppassword --silent"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-
-  redis:
-    image: redis:7.2-alpine
-    profiles: ["worker", "scheduler"]
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   worker:
-    image: skelton-monorepo-starter:local
+    <<: *app-image
     profiles: ["worker"]
+    restart: unless-stopped
     command: ["/app/api/worker"]
     environment:
-      APP_ENV: development
-      TZ: UTC
-      SERVICE_NAME: monorepo-starter
-      LOG_LEVEL: info
-      DB_DRIVER: mysql
-      DATABASE_URL: mysql://user:password@mysql:3306/example_service
-      DB_PREPARE: "true"
-      DB_TLS_MODE: disable
-      DB_ALLOW_PUBLIC_KEY_RETRIEVAL: "true"
+      <<: *runtime
       WORKER_ENABLED: "true"
-      REDIS_URL: redis://redis:6379
-      WORKER_QUEUE_NAME: default
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
 
   scheduler:
-    image: skelton-monorepo-starter:local
+    <<: *app-image
     profiles: ["scheduler"]
+    restart: unless-stopped
     command: ["/app/api/scheduler"]
     environment:
-      APP_ENV: development
-      TZ: UTC
-      SERVICE_NAME: monorepo-starter
-      LOG_LEVEL: info
-      DB_DRIVER: mysql
-      DATABASE_URL: mysql://user:password@mysql:3306/example_service
-      DB_PREPARE: "true"
-      DB_TLS_MODE: disable
-      DB_ALLOW_PUBLIC_KEY_RETRIEVAL: "true"
+      <<: *runtime
       SCHEDULER_ENABLED: "true"
-      SCHEDULER_TIMEZONE: ${SCHEDULER_TIMEZONE:-UTC}
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-volumes:
-  mysql_data:
-  redis_data:
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
