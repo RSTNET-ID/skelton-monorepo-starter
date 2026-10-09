@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 
 FROM web-deps AS web-builder
 COPY apps/web/ ./
-RUN bun run check && bun run --bun build
+RUN bun run check && bun run build
 
 FROM oven/bun:1.4.2-alpine AS supervisor-builder
 WORKDIR /src

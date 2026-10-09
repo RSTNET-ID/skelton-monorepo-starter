@@ -14,7 +14,7 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "bun run --bun vite build",
     "preview": "vite preview",
     "start": "./build/server",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -26,7 +26,7 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
-    "ci": "bun run check:components && bun run check && bun run lint && bun run format:check && bun run test:unit && bun run --bun build",
+    "ci": "bun run check:components && bun run check && bun run lint && bun run format:check && bun run test:unit && bun run build",
     "check:components": "bun scripts/check-base-components.ts",
     "make:module": "bun scripts/make-module.ts",
     "dev:monorepo": "API_PROXY_TARGET=http://127.0.0.1:3001 API_BASE_URL=http://127.0.0.1:3001/api vite dev"

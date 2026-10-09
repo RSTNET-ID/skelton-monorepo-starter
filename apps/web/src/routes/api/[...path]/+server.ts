@@ -37,7 +37,10 @@ const proxy: RequestHandler = async ({ request, url, params, locals, getClientAd
 		const response = await fetch(upstreamUrl, {
 			method: request.method,
 			headers,
-			body: request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.arrayBuffer(),
+			body:
+				request.method === 'GET' || request.method === 'HEAD'
+					? undefined
+					: await request.arrayBuffer(),
 			redirect: 'manual',
 			signal: controller.signal
 		});
